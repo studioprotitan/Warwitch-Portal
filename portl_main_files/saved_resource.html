@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<!-- saved from url=(0012)about:srcdoc -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      (function() {
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            window.parent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            window.parent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            window.parent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        let requestId = 0;
+        let callbacksMap = new Map();
+        let streamControllers = new Map();
+        
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        window.storage = {
+          get: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+            });
+          },
+          set: (key, value, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+            });
+          },
+          delete: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+            });
+          },
+          list: (prefix, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+            });
+          }
+        };
+
+        let pendingBlobs = new Map();
+        URL.createObjectURL = (blob) => {
+          // Store the blob and create an ID and URL for it
+          const blobId = `blob-${Date.now()}-${Math.random()}`;
+          pendingBlobs.set(blobId, blob);
+          return `blob-request://${blobId}`;
+        };
+
+        URL.revokeObjectURL = (url) => {
+          // Remove the blob from our store
+          const blobId = url.replace("blob-request://", "");
+          pendingBlobs.delete(blobId);
+        };
+
+        const getBlobFromURL = (url) => {
+          const blobId = url.replace("blob-request://", "");
+          return pendingBlobs.get(blobId);
+        };
+
+        // Override global fetch with streaming support
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = requestId++;
+            const channelId = `fetch-${id}-${Date.now()}`;
+            
+            callbacksMap.set(id, { 
+              resolve: (response) => {
+                // Create a ReadableStream for the response body
+                const stream = new ReadableStream({
+                  start(controller) {
+                    streamControllers.set(channelId, controller);
+                  },
+                  cancel() {
+                    streamControllers.delete(channelId);
+                  }
+                });
+                
+                // Create and return the Response with the stream
+                resolve(new Response(stream, {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: response.headers
+                }));
+              },
+              reject,
+              channelId
+            });
+            
+            window.parent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+              channelId
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          if (event.data.type === 'takeScreenshot') {
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              window.parent.postMessage({
+                type: 'screenshotError',
+                error: new Error('Root element not found'),
+              }, '*');
+            }
+            const screenshot = await htmlToImage.toPng(rootElement, {
+              imagePlaceholder:
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+            });
+            window.parent.postMessage({
+              type: 'screenshotData',
+              data: screenshot,
+            }, '*');
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+              callbacksMap.delete(event.data.id);
+            } else {
+              // Initial response with headers, status, etc.
+              callback.resolve({
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              });
+              // Don't delete the callback yet if streaming
+              if (!event.data.body) {
+                callbacksMap.delete(event.data.id);
+              }
+            }
+          } else if (event.data.type === 'proxyFetchStream') {
+            // Handle streaming data chunks
+            const controller = streamControllers.get(event.data.channelId);
+            if (controller) {
+              if (event.data.error) {
+                controller.error(new Error(event.data.error));
+                streamControllers.delete(event.data.channelId);
+              } else if (event.data.done) {
+                controller.close();
+                streamControllers.delete(event.data.channelId);
+                // Clean up the callback
+                const callback = Array.from(callbacksMap.entries()).find(
+                  ([_, value]) => value.channelId === event.data.channelId
+                );
+                if (callback) {
+                  callbacksMap.delete(callback[0]);
+                }
+              } else if (event.data.chunk) {
+                controller.enqueue(new Uint8Array(event.data.chunk));
+              }
+            }
+          } else if (event.data.type === 'storageGet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageSet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageDelete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageList') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        window.addEventListener('click', (event) => {
+          const isEl = event.target instanceof HTMLElement;
+          if (!isEl) return;
+    
+          // find ancestor links
+          const linkEl = event.target.closest("a");
+          if (!linkEl || !linkEl.href) return;
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          if (linkEl.href.startsWith("blob-request:")) {
+            const blob = getBlobFromURL(linkEl.href);
+            if (!blob) return;
+            void blob.arrayBuffer().then((data) => {
+              window.parent.postMessage({
+                type: "downloadFile",
+                filename: linkEl.download,
+                data,
+                mimeType: blob.type || "application/octet-stream",
+              });
+            });
+          } else if (linkEl.href.startsWith("data:")) {
+            const [header, base64Data] = linkEl.href.split(",");
+            const mimeMatch = header.match(/data:([^;]+)/);
+            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+            const binaryString = atob(base64Data);
+            const data = Uint8Array.from(binaryString, (c) =>
+              c.charCodeAt(0),
+            ).buffer;
+            window.parent.postMessage({
+              type: "downloadFile",
+              filename: linkEl.download,
+              data,
+              mimeType,
+            });
+          } else {
+            let linkUrl;
+            try {
+              linkUrl = new URL(linkEl.href);
+            } catch (error) {
+              return;
+            }
+    
+            if (linkUrl.hostname === window.location.hostname) return;
+      
+            window.parent.postMessage({
+              type: 'openExternal',
+              href: linkEl.href,
+            }, '*');
+          }
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          window.parent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          window.parent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gateway Universe - Portal Selection</title>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --portal-a-gold: #fbbf24;
+      --portal-b-red: #dc2626;
+      --portal-c-gray: #6b7280;
+      --bravo-blue: #3b82f6;
+      --dark-bg: #0a0a0f;
+      --card-bg: #1a1a24;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(220, 38, 38, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+      animation: bgShift 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes bgShift {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 0.8; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      width: 100%;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem 3rem;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #fbbf24 0%, #dc2626 50%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      animation: titleGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes titleGlow {
+      0%, 100% { filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.3)); }
+      50% { filter: drop-shadow(0 0 40px rgba(220, 38, 38, 0.5)); }
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+      color: var(--text-secondary);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-description {
+      max-width: 700px;
+      margin: 2rem auto 0;
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Portal Grid */
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .portal-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .portal-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.05) 100%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .portal-card:hover::before {
+      opacity: 1;
+    }
+
+    .portal-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .portal-card.portal-a {
+      border-color: var(--portal-a-gold);
+      box-shadow: 0 4px 20px rgba(251, 191, 36, 0.2);
+    }
+
+    .portal-card.portal-a:hover {
+      box-shadow: 0 20px 60px rgba(251, 191, 36, 0.4);
+    }
+
+    .portal-card.portal-b {
+      border-color: var(--portal-b-red);
+      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.2);
+    }
+
+    .portal-card.portal-b:hover {
+      box-shadow: 0 20px 60px rgba(220, 38, 38, 0.4);
+    }
+
+    .portal-card.bravo {
+      border-color: var(--bravo-blue);
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+    }
+
+    .portal-card.bravo:hover {
+      box-shadow: 0 20px 60px rgba(59, 130, 246, 0.4);
+    }
+
+    .portal-card.locked {
+      border-color: var(--portal-c-gray);
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .portal-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      display: block;
+      text-align: center;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .portal-name {
+      font-size: 2rem;
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .portal-card.portal-a .portal-name {
+      color: var(--portal-a-gold);
+    }
+
+    .portal-card.portal-b .portal-name {
+      color: var(--portal-b-red);
+    }
+
+    .portal-card.bravo .portal-name {
+      color: var(--bravo-blue);
+    }
+
+    .portal-card.locked .portal-name {
+      color: var(--portal-c-gray);
+    }
+
+    .portal-subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .portal-description {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .portal-features {
+      list-style: none;
+      margin-bottom: 2rem;
+      padding-left: 0;
+    }
+
+    .portal-features li {
+      padding: 0.5rem 0;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .portal-features li::before {
+      content: '✓';
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .portal-card.portal-a .portal-features li::before {
+      color: var(--portal-a-gold);
+    }
+
+    .portal-card.portal-b .portal-features li::before {
+      color: var(--portal-b-red);
+    }
+
+    .portal-card.bravo .portal-features li::before {
+      color: var(--bravo-blue);
+    }
+
+    .portal-button {
+      width: 100%;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .portal-button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .portal-button:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .portal-button span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .portal-card.portal-a .portal-button {
+      background: linear-gradient(135deg, var(--portal-a-gold) 0%, #f59e0b 100%);
+      color: #000;
+    }
+
+    .portal-card.portal-b .portal-button {
+      background: linear-gradient(135deg, var(--portal-b-red) 0%, #b91c1c 100%);
+      color: #fff;
+    }
+
+    .portal-card.bravo .portal-button {
+      background: linear-gradient(135deg, var(--bravo-blue) 0%, #2563eb 100%);
+      color: #fff;
+    }
+
+    .portal-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .status-active {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+      border: 1px solid #22c55e;
+    }
+
+    .status-external {
+      background: rgba(220, 38, 38, 0.2);
+      color: #dc2626;
+      border: 1px solid #dc2626;
+    }
+
+    .status-locked {
+      background: rgba(107, 114, 128, 0.2);
+      color: #6b7280;
+      border: 1px solid #6b7280;
+    }
+
+    /* Info Section */
+    .info-section {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      text-align: center;
+    }
+
+    .info-section h3 {
+      color: var(--bravo-blue);
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .info-section p {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .portal-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .hero {
+        padding: 2rem 1rem;
+      }
+
+      .portal-card {
+        padding: 2rem;
+      }
+    }
+  </style>
+</head>
+<body id="artifacts-component-root-html" style="opacity: 1; transition: opacity 0.5s;">
+  <div class="container">
+    <div class="hero">
+      <h1 class="hero-title">🌌 Gateway Universe</h1>
+      <h2 class="hero-subtitle">Select Your Portal Destination</h2>
+      <p class="hero-description">
+        Choose your entry point into the interconnected realms. Each portal leads to a unique experience within the Gateway Universe ecosystem.
+      </p>
+    </div>
+
+    <div class="portal-grid">
+      <!-- Portal A: Gateway Lobby -->
+      <div class="portal-card portal-a" onclick="navigateTo(&#39;gateway-lobby-a.html&#39;)">
+        <span class="status-badge status-active">⚡ ACTIVE</span>
+        <div class="portal-icon">🏰</div>
+        <h2 class="portal-name">PORTAL A</h2>
+        <p class="portal-subtitle">Gateway Lobby Alpha</p>
+        <p class="portal-description">
+          The primary checkpoint and pilot selection hub. Begin your journey through the Enigmatic Realms here.
+        </p>
+        <ul class="portal-features">
+          <li>Pilot Selection System</li>
+          <li>Checkpoint Validation</li>
+          <li>Asset Manifest Verification</li>
+          <li>Deployment to Lobby A</li>
+        </ul>
+        <button class="portal-button">
+          <span>ENTER PORTAL A →</span>
+        </button>
+      </div>
+
+      <!-- Portal B: War Witch Siren -->
+      <div class="portal-card portal-b" onclick="navigateTo(&#39;portal-b.html&#39;)">
+        <span class="status-badge status-external">🌐 EXTERNAL</span>
+        <div class="portal-icon">⚡</div>
+        <h2 class="portal-name">PORTAL B</h2>
+        <p class="portal-subtitle">War Witch Siren</p>
+        <p class="portal-description">
+          External gateway to the War Witch Siren universe. Experience the full web presence and lore.
+        </p>
+        <ul class="portal-features">
+          <li>Full Website Access</li>
+          <li>Lore &amp; World Building</li>
+          <li>Community Hub</li>
+          <li>External Resources</li>
+        </ul>
+        <button class="portal-button">
+          <span>ENTER PORTAL B →</span>
+        </button>
+      </div>
+
+      <!-- Checkpoint Bravo -->
+      <div class="portal-card bravo" onclick="navigateTo(&#39;checkpoint-bravo.html&#39;)">
+        <span class="status-badge status-active">⚔️ ACTIVE</span>
+        <div class="portal-icon">⚔️</div>
+        <h2 class="portal-name">CHECKPOINT BRAVO</h2>
+        <p class="portal-subtitle">The Arsenal</p>
+        <p class="portal-description">
+          Advanced checkpoint featuring weapon systems, tactical loadouts, and combat preparation.
+        </p>
+        <ul class="portal-features">
+          <li>Weapon Selection</li>
+          <li>Tactical Loadouts</li>
+          <li>Arsenal Management</li>
+          <li>Combat Preparation</li>
+        </ul>
+        <button class="portal-button">
+          <span>ENTER BRAVO →</span>
+        </button>
+      </div>
+
+      <!-- Portal C: Coming Soon -->
+      <div class="portal-card locked">
+        <span class="status-badge status-locked">🔒 LOCKED</span>
+        <div class="portal-icon">❓</div>
+        <h2 class="portal-name">PORTAL C</h2>
+        <p class="portal-subtitle">Coming Soon</p>
+        <p class="portal-description">
+          Future expansion portal. Stay tuned for updates on this mysterious gateway.
+        </p>
+        <ul class="portal-features">
+          <li>Under Development</li>
+          <li>New Features Incoming</li>
+          <li>TBA</li>
+          <li>TBA</li>
+        </ul>
+        <button class="portal-button" disabled="">
+          <span>LOCKED</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>💡 Navigation Guide</h3>
+      <p>
+        Click any active portal card to enter that realm. Portal A serves as the main entry point, while Portal B connects you to external resources. Checkpoint Bravo provides advanced tactical options.
+      </p>
+      <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+        <strong>Tip:</strong> Complete validation in Portal A to unlock additional features across the Gateway Universe.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    function navigateTo(url) {
+      // Add transition effect
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.3s ease';
+      
+      setTimeout(() => {
+        window.location.href = url;
+      }, 300);
+    }
+
+    // Add entrance animation
+    window.addEventListener('load', () => {
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+      }, 100);
+    });
+  </script>
+
+</body></html>

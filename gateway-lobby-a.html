@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gateway Lobby Alpha - Pilot Selection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="gateway-lobby-a.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <button class="nav-back-btn" onclick="window.location.href='gateway-universe.html'">
+      ← GATEWAY UNIVERSE
+    </button>
+    <h1>LOBBY ALPHA: PILOT REGISTRATION</h1>
+  </nav>
+
+  <section class="hero-banner">
+    <h1 class="hero-title">🏰 GATEWAY LOBBY</h1>
+    <h2 class="hero-subtitle">PILOT IDENTIFICATION & CHECKPOINT</h2>
+  </section>
+
+  <div class="container">
+    <div class="pilot-card">
+      <div class="pilot-avatar">👨‍🚀</div>
+      <h2 class="pilot-name">UNIDENTIFIED PILOT</h2>
+      <p class="pilot-status">STATUS: PENDING VERIFICATION</p>
+      
+      <div class="verification-steps">
+        <div class="step-item">
+          <span class="step-icon">1</span>
+          <div class="step-content">
+            <h3>Signal Check</h3>
+            <p>Verifying connection stability...</p>
+          </div>
+          <span class="step-status" id="step1">WAITING</span>
+        </div>
+
+        <div class="step-item">
+          <span class="step-icon">2</span>
+          <div class="step-content">
+            <h3>Asset Manifest</h3>
+            <p>Checking digital inventory...</p>
+          </div>
+          <span class="step-status" id="step2">WAITING</span>
+        </div>
+
+        <div class="step-item">
+          <span class="step-icon">3</span>
+          <div class="step-content">
+            <h3>Clearance Grant</h3>
+            <p>Finalizing entry permissions...</p>
+          </div>
+          <span class="step-status" id="step3">WAITING</span>
+        </div>
+      </div>
+
+      <button class="action-btn" onclick="startVerification()">
+        INITIATE VERIFICATION SEQUENCE
+      </button>
+    </div>
+
+    <div class="info-panel">
+      <h3>ℹ️ LOBBY INSTRUCTIONS</h3>
+      <p>
+        Welcome to Gateway Lobby Alpha. This is the primary checkpoint for all travelers entering the Enigmatic Realms.
+        Please complete the verification sequence above to obtain your Pilot License.
+      </p>
+    </div>
+  </div>
+
+  <script src="gateway-lobby-a.js"></script>
+</body>
+</html>

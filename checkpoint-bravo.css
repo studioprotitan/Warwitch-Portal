@@ -1,0 +1,203 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #0a0a0f;
+  color: #f3f4f6;
+  background-image: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+}
+
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: rgba(26, 26, 36, 0.9);
+  border-bottom: 1px solid #3b82f6;
+}
+
+.nav-back-btn {
+  background: transparent;
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.nav-back-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.top-nav h1 {
+  font-size: 1rem;
+  color: #3b82f6;
+  letter-spacing: 0.1em;
+}
+
+.hero-banner {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.hero-title {
+  font-size: 3rem;
+  color: #3b82f6;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.hero-subtitle {
+  color: #9ca3af;
+  font-size: 1.2rem;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.section-header {
+  color: #3b82f6;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+  padding-bottom: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.weapon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.weapon-card {
+  background: #1a1a24;
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.3s;
+}
+
+.weapon-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+}
+
+.weapon-card.weapon-locked {
+  border-color: #6b7280;
+  opacity: 0.7;
+}
+
+.weapon-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.weapon-name {
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.weapon-class, .weapon-damage {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin: 0.2rem 0;
+}
+
+.weapon-status {
+  display: block;
+  margin: 1rem 0;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.status-available { color: #22c55e; }
+.status-locked { color: #6b7280; }
+
+.select-weapon-btn {
+  width: 100%;
+  padding: 0.8rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.select-weapon-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.select-weapon-btn:disabled {
+  background: #4b5563;
+  cursor: not-allowed;
+}
+
+.loadout-section {
+  background: #1a1a24;
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #3b82f6;
+  margin-bottom: 3rem;
+}
+
+.loadout-box {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.loadout-slot {
+  background: rgba(0,0,0,0.3);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.slot-label {
+  display: block;
+  color: #3b82f6;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.slot-value {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.confirm-btn, .deploy-button {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  background: #22c55e;
+  color: #000;
+}
+
+.deploy-button {
+  background: #dc2626;
+  color: white;
+}
+
+.deploy-button:disabled {
+  background: #4b5563;
+  cursor: not-allowed;
+}
+
+.deploy-cta {
+  text-align: center;
+}

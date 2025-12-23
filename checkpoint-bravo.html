@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkpoint Bravo - The Arsenal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="checkpoint-bravo.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <button class="nav-back-btn" onclick="window.location.href='gateway-universe.html'">
+      ← GATEWAY UNIVERSE
+    </button>
+    <h1>CHECKPOINT BRAVO: THE ARSENAL</h1>
+  </nav>
+
+  <section class="hero-banner">
+    <h1 class="hero-title">⚔️ THE ARSENAL</h1>
+    <h2 class="hero-subtitle">CHECKPOINT BRAVO - TACTICAL LOADOUT SELECTION</h2>
+  </section>
+
+  <div class="container">
+    <h2 class="section-header">🎯 WEAPON SYSTEMS</h2>
+    <div class="weapon-grid">
+      <div class="weapon-card">
+        <div class="weapon-icon">🔫</div>
+        <h3 class="weapon-name">Pulse Rifle</h3>
+        <p class="weapon-class">CLASS: Energy Weapon</p>
+        <p class="weapon-damage">DAMAGE: 75 per shot</p>
+        <span class="weapon-status status-available">✅ AVAILABLE</span>
+        <button class="select-weapon-btn" onclick="selectWeapon('Pulse Rifle')">EQUIP WEAPON</button>
+      </div>
+
+      <div class="weapon-card">
+        <div class="weapon-icon">⚡</div>
+        <h3 class="weapon-name">Plasma Cannon</h3>
+        <p class="weapon-class">CLASS: Heavy Weapon</p>
+        <p class="weapon-damage">DAMAGE: 150 per shot</p>
+        <span class="weapon-status status-available">✅ AVAILABLE</span>
+        <button class="select-weapon-btn" onclick="selectWeapon('Plasma Cannon')">EQUIP WEAPON</button>
+      </div>
+
+      <div class="weapon-card">
+        <div class="weapon-icon">🗡️</div>
+        <h3 class="weapon-name">Quantum Blade</h3>
+        <p class="weapon-class">CLASS: Melee Weapon</p>
+        <p class="weapon-damage">DAMAGE: 100 per strike</p>
+        <span class="weapon-status status-available">✅ AVAILABLE</span>
+        <button class="select-weapon-btn" onclick="selectWeapon('Quantum Blade')">EQUIP WEAPON</button>
+      </div>
+
+      <div class="weapon-card weapon-locked">
+        <div class="weapon-icon">💥</div>
+        <h3 class="weapon-name">Antimatter Launcher</h3>
+        <p class="weapon-class">CLASS: Experimental</p>
+        <p class="weapon-damage">DAMAGE: 500 per shot</p>
+        <span class="weapon-status status-locked">🔒 LOCKED</span>
+        <button class="select-weapon-btn" disabled>LEVEL 10 REQUIRED</button>
+      </div>
+    </div>
+
+    <section class="loadout-section">
+      <h2 class="loadout-header">📋 CURRENT LOADOUT</h2>
+
+      <div class="loadout-box">
+        <div class="loadout-slot">
+          <span class="slot-label">PRIMARY WEAPON:</span>
+          <span class="slot-value" id="primary-weapon">NONE</span>
+        </div>
+        
+        <div class="loadout-slot">
+          <span class="slot-label">SECONDARY WEAPON:</span>
+          <span class="slot-value" id="secondary-weapon">NONE</span>
+        </div>
+        
+        <div class="loadout-slot">
+          <span class="slot-label">MELEE WEAPON:</span>
+          <span class="slot-value" id="melee-weapon">NONE</span>
+        </div>
+        
+        <div class="loadout-slot">
+          <span class="slot-label">TACTICAL STATUS:</span>
+          <span class="slot-value status-ready" id="tactical-status">⏳ AWAITING DEPLOYMENT</span>
+        </div>
+      </div>
+
+      <button class="confirm-btn" id="confirm-btn" onclick="confirmLoadout()">
+        ✅ CONFIRM LOADOUT
+      </button>
+    </section>
+
+    <section class="deploy-section">
+      <div class="deploy-cta">
+        <h2 class="deploy-title">🚀 DEPLOY TO MISSION</h2>
+        <p class="deploy-subtitle">Loadout Confirmed - Ready for Combat</p>
+        <button class="deploy-button" id="deploy-btn" onclick="deployToMission()" disabled>
+          DEPLOY NOW
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script src="checkpoint-bravo.js"></script>
+</body>
+</html>

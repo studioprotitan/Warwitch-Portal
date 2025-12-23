@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gateway Universe - Portal Selection</title>
+  
+  <link rel="stylesheet" href="gateway-universe.css">
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1 class="hero-title">🌌 Gateway Universe</h1>
+      <h2 class="hero-subtitle">Select Your Portal Destination</h2>
+      <p class="hero-description">
+        Choose your entry point into the interconnected realms. Each portal leads to a unique experience within the Gateway Universe ecosystem.
+      </p>
+    </div>
+
+    <div class="portal-grid">
+      <div class="portal-card portal-a" onclick="navigateTo('gateway-lobby-a.html')">
+        <span class="status-badge status-active">⚡ ACTIVE</span>
+        <div class="portal-icon">🏰</div>
+        <h2 class="portal-name">PORTAL A</h2>
+        <p class="portal-subtitle">Gateway Lobby Alpha</p>
+        <p class="portal-description">
+          The primary checkpoint and pilot selection hub. Begin your journey through the Enigmatic Realms here.
+        </p>
+        <ul class="portal-features">
+          <li>Pilot Selection System</li>
+          <li>Checkpoint Validation</li>
+          <li>Asset Manifest Verification</li>
+          <li>Deployment to Lobby A</li>
+        </ul>
+        <button class="portal-button">
+          <span>ENTER PORTAL A →</span>
+        </button>
+      </div>
+
+      <div class="portal-card portal-b" onclick="navigateTo('portal-b.html')">
+        <span class="status-badge status-external">🌐 EXTERNAL</span>
+        <div class="portal-icon">⚡</div>
+        <h2 class="portal-name">PORTAL B</h2>
+        <p class="portal-subtitle">War Witch Siren</p>
+        <p class="portal-description">
+          External gateway to the War Witch Siren universe. Experience the full web presence and lore.
+        </p>
+        <ul class="portal-features">
+          <li>Full Website Access</li>
+          <li>Lore & World Building</li>
+          <li>Community Hub</li>
+          <li>External Resources</li>
+        </ul>
+        <button class="portal-button">
+          <span>ENTER PORTAL B →</span>
+        </button>
+      </div>
+
+      <div class="portal-card bravo" onclick="navigateTo('checkpoint-bravo.html')">
+        <span class="status-badge status-active">⚔️ ACTIVE</span>
+        <div class="portal-icon">⚔️</div>
+        <h2 class="portal-name">CHECKPOINT BRAVO</h2>
+        <p class="portal-subtitle">The Arsenal</p>
+        <p class="portal-description">
+          Advanced checkpoint featuring weapon systems, tactical loadouts, and combat preparation.
+        </p>
+        <ul class="portal-features">
+          <li>Weapon Selection</li>
+          <li>Tactical Loadouts</li>
+          <li>Arsenal Management</li>
+          <li>Combat Preparation</li>
+        </ul>
+        <button class="portal-button">
+          <span>ENTER BRAVO →</span>
+        </button>
+      </div>
+
+      <div class="portal-card locked">
+        <span class="status-badge status-locked">🔒 LOCKED</span>
+        <div class="portal-icon">❓</div>
+        <h2 class="portal-name">PORTAL C</h2>
+        <p class="portal-subtitle">Coming Soon</p>
+        <p class="portal-description">
+          Future expansion portal. Stay tuned for updates on this mysterious gateway.
+        </p>
+        <ul class="portal-features">
+          <li>Under Development</li>
+          <li>New Features Incoming</li>
+          <li>TBA</li>
+          <li>TBA</li>
+        </ul>
+        <button class="portal-button" disabled>
+          <span>LOCKED</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>💡 Navigation Guide</h3>
+      <p>
+        Click any active portal card to enter that realm. Portal A serves as the main entry point, while Portal B connects you to external resources. Checkpoint Bravo provides advanced tactical options.
+      </p>
+      <p class="info-tip">
+        <strong>Tip:</strong> Complete validation in Portal A to unlock additional features across the Gateway Universe.
+      </p>
+    </div>
+  </div>
+
+  <script src="gateway-universe.js"></script>
+</body>
+</html>
